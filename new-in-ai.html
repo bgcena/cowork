@@ -287,10 +287,15 @@
   }
 
   async function fetchHN(query, count) {
-    const url = `https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(query)}&tags=story&hitsPerPage=${count * 3}&numericFilters=points>5`;
+    const params = new URLSearchParams({
+      query,
+      tags: 'story',
+      hitsPerPage: count * 4,
+    });
+    const url = `https://hn.algolia.com/api/v1/search?${params}`;
     const r = await fetch(url);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const d = await r.json();
-    // Filter: must have a title and URL, deduplicate
     const seen = new Set();
     return d.hits.filter(h => {
       if (!h.title || seen.has(h.objectID)) return false;
@@ -326,10 +331,10 @@
         )).join('');
 
     } catch(e) {
-      document.getElementById('learnings-grid').innerHTML =
-        '<div class="card"><div class="card-icon">⚠️</div><div class="card-title">Could not load live stories</div><div class="card-desc">Check your connection and refresh.</div></div>';
-      document.getElementById('releases-grid').innerHTML =
-        '<div class="card"><div class="card-icon">⚠️</div><div class="card-title">Could not load live stories</div><div class="card-desc">Check your connection and refresh.</div></div>';
+      console.error('HN fetch failed:', e);
+      const errCard = `<div class="card"><div class="card-icon">⚠️</div><div class="card-title">Could not load live stories</div><div class="card-desc">${e.message || 'Network error'} — refresh to retry.</div></div>`;
+      document.getElementById('learnings-grid').innerHTML = errCard;
+      document.getElementById('releases-grid').innerHTML = errCard;
     }
 
     document.getElementById('ts').textContent =
