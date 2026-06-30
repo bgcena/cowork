@@ -1,5 +1,0 @@
-[phases.build]
-cmds = []
-
-[start]
-cmd = "npx -y serve -s . -l 3000"
