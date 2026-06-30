@@ -100,6 +100,48 @@
     .link-btn.primary { background: #111; color: #fff; }
     .link-btn.primary:hover { background: #222; }
 
+    /* ── Score HUD ── */
+    #hud {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: #fff;
+      border: 2.5px solid #111;
+      border-radius: 999px;
+      box-shadow: 4px 4px 0 #111;
+      padding: 8px 24px;
+      font-family: Arial Black, sans-serif;
+      font-size: 15px;
+      color: #111;
+      user-select: none;
+    }
+    #score-val { font-size: 22px; color: #111; min-width: 32px; text-align: center; }
+    #timer-bar-wrap {
+      width: 60px; height: 8px; background: #eee;
+      border-radius: 4px; border: 1.5px solid #ccc; overflow: hidden;
+    }
+    #timer-bar { height: 100%; background: #f472b6; border-radius: 4px; transition: width 0.1s linear; }
+
+    /* Floating +1 / -1 popups */
+    .popup {
+      position: fixed;
+      font-family: Arial Black, sans-serif;
+      font-size: 22px;
+      font-weight: 900;
+      pointer-events: none;
+      z-index: 200;
+      animation: floatUp 0.8s ease-out forwards;
+    }
+    @keyframes floatUp {
+      0%   { opacity: 1; transform: translateY(0) scale(1); }
+      100% { opacity: 0; transform: translateY(-60px) scale(1.3); }
+    }
+
     /* ── Cursor ── */
     #cursor {
       position: fixed;
@@ -158,10 +200,18 @@
   </div>
 
   <canvas id="butterfly-canvas" style="position:fixed;inset:0;pointer-events:none;z-index:0;"></canvas>
+
+  <!-- Score HUD -->
+  <div id="hud">
+    🦋 <span id="score-val">0</span>
+    <div id="timer-bar-wrap"><div id="timer-bar" style="width:100%"></div></div>
+    <span style="font-size:12px;color:#888;">-1 in 2s</span>
+  </div>
+
   <div id="cursor"></div>
 
   <script>
-    // ── Butterfly animation ──
+    // ── Butterfly Game ──
     const bc = document.getElementById('butterfly-canvas');
     const bctx = bc.getContext('2d');
     bc.width = window.innerWidth;
@@ -173,11 +223,48 @@
       ['#fb923c','#fecaca'], ['#e879f9','#ddd6fe'], ['#22d3ee','#bbf7d0']
     ];
 
-    function makeButterly() {
+    let score = 0;
+    const scoreEl = document.getElementById('score-val');
+    const timerBar = document.getElementById('timer-bar');
+
+    function setScore(n) {
+      score = n;
+      scoreEl.textContent = score;
+      scoreEl.style.color = score < 0 ? '#ef4444' : '#111';
+    }
+
+    function spawnPopup(x, y, text, color) {
+      const el = document.createElement('div');
+      el.className = 'popup';
+      el.textContent = text;
+      el.style.left = x + 'px';
+      el.style.top  = y + 'px';
+      el.style.color = color;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 850);
+    }
+
+    // 2-second penalty timer
+    let timerStart = performance.now();
+    function tickPenalty(now) {
+      const elapsed = (now - timerStart) / 2000;
+      const pct = Math.max(0, 1 - elapsed);
+      timerBar.style.width = (pct * 100) + '%';
+      timerBar.style.background = pct > 0.4 ? '#f472b6' : '#ef4444';
+      if (elapsed >= 1) {
+        if (score > 0) {
+          setScore(score - 1);
+          spawnPopup(window.innerWidth / 2, 70, '-1', '#ef4444');
+        }
+        timerStart = now;
+      }
+    }
+
+    function makeButterfly() {
       const cols = WING_COLORS[Math.floor(Math.random() * WING_COLORS.length)];
       return {
         x: Math.random() * window.innerWidth,
-        y: Math.random() * window.innerHeight,
+        y: 50 + Math.random() * (window.innerHeight - 100),
         vx: (Math.random() - 0.5) * 1.2,
         vy: (Math.random() - 0.5) * 1.2,
         size: 16 + Math.random() * 18,
@@ -189,25 +276,28 @@
         spotColor: cols[1],
         wobble: Math.random() * Math.PI * 2,
         wobbleSpeed: 0.015 + Math.random() * 0.01,
+        state: 'flying',  // 'flying' | 'falling' | 'dead'
+        fallVy: 0,
+        fallSpin: 0,
+        alpha: 1,
       };
     }
 
-    const butterflies = Array.from({ length: 7 }, makeButterly);
+    const butterflies = Array.from({ length: 7 }, makeButterfly);
 
     function drawButterfly(b) {
       bctx.save();
+      bctx.globalAlpha = b.alpha;
       bctx.translate(b.x, b.y);
       bctx.rotate(b.bodyAngle);
 
-      const flap = Math.abs(Math.cos(b.flapAngle)); // 0=closed 1=open
+      const flap = b.state === 'falling'
+        ? 0.15  // wings mostly closed when falling
+        : Math.abs(Math.cos(b.flapAngle));
       const w = b.size * flap;
 
       // Left wing
-      bctx.save();
-      bctx.scale(-1, 1);
-      drawWing(b, w);
-      bctx.restore();
-
+      bctx.save(); bctx.scale(-1, 1); drawWing(b, w); bctx.restore();
       // Right wing
       drawWing(b, w);
 
@@ -217,73 +307,111 @@
       bctx.fillStyle = '#111';
       bctx.fill();
 
-      // Antennae
-      bctx.strokeStyle = '#111';
-      bctx.lineWidth = 1;
+      // Antennae (droop when falling)
+      bctx.strokeStyle = '#111'; bctx.lineWidth = 1;
+      const droop = b.state === 'falling' ? 0.5 : 0;
       bctx.beginPath();
       bctx.moveTo(-3, -b.size * 0.4);
-      bctx.quadraticCurveTo(-8, -b.size * 0.7, -6, -b.size * 0.85);
+      bctx.quadraticCurveTo(-8, -b.size * (0.7 - droop), -6, -b.size * (0.85 - droop));
       bctx.stroke();
       bctx.beginPath();
       bctx.moveTo(3, -b.size * 0.4);
-      bctx.quadraticCurveTo(8, -b.size * 0.7, 6, -b.size * 0.85);
+      bctx.quadraticCurveTo(8, -b.size * (0.7 - droop), 6, -b.size * (0.85 - droop));
       bctx.stroke();
+
+      // X eyes when falling
+      if (b.state === 'falling') {
+        bctx.strokeStyle = '#fff'; bctx.lineWidth = 1.5;
+        [[-3,0],[3,0]].forEach(([ex, ey]) => {
+          const r = 2;
+          bctx.beginPath(); bctx.moveTo(ex-r, ey-r); bctx.lineTo(ex+r, ey+r); bctx.stroke();
+          bctx.beginPath(); bctx.moveTo(ex+r, ey-r); bctx.lineTo(ex-r, ey+r); bctx.stroke();
+        });
+      }
 
       bctx.restore();
     }
 
     function drawWing(b, w) {
       const s = b.size;
-      // Upper wing
       bctx.beginPath();
       bctx.moveTo(0, -s * 0.1);
       bctx.bezierCurveTo(w * 0.4, -s * 0.7, w * 1.1, -s * 0.5, w, 0);
       bctx.bezierCurveTo(w * 0.9, s * 0.15, w * 0.3, s * 0.1, 0, s * 0.1);
       bctx.fillStyle = b.wingColor + 'cc';
       bctx.fill();
-      bctx.strokeStyle = '#11111155';
-      bctx.lineWidth = 0.8;
-      bctx.stroke();
-      // Lower wing
+      bctx.strokeStyle = '#11111144'; bctx.lineWidth = 0.8; bctx.stroke();
       bctx.beginPath();
       bctx.moveTo(0, s * 0.1);
       bctx.bezierCurveTo(w * 0.6, s * 0.2, w * 0.8, s * 0.7, w * 0.3, s * 0.7);
       bctx.bezierCurveTo(0, s * 0.7, -w * 0.1, s * 0.4, 0, s * 0.1);
       bctx.fillStyle = b.wingColor + 'aa';
-      bctx.fill();
-      bctx.stroke();
-      // Spot
+      bctx.fill(); bctx.stroke();
       bctx.beginPath();
       bctx.arc(w * 0.55, -s * 0.15, s * 0.1, 0, Math.PI * 2);
-      bctx.fillStyle = b.spotColor + 'dd';
-      bctx.fill();
+      bctx.fillStyle = b.spotColor + 'dd'; bctx.fill();
     }
 
-    function animButterflies() {
-      bctx.clearRect(0, 0, bc.width, bc.height);
-      butterflies.forEach(b => {
-        b.flapAngle += b.flapSpeed;
-        b.wobble += b.wobbleSpeed;
-        b.bodyAngle += b.turnSpeed + Math.sin(b.wobble) * 0.02;
-        b.vx += Math.cos(b.bodyAngle) * 0.04;
-        b.vy += Math.sin(b.bodyAngle) * 0.04;
-        // Speed cap
-        const spd = Math.hypot(b.vx, b.vy);
-        if (spd > 1.6) { b.vx = b.vx / spd * 1.6; b.vy = b.vy / spd * 1.6; }
-        b.x += b.vx;
-        b.y += b.vy;
-        // Wrap edges
-        const pad = b.size * 2;
-        if (b.x < -pad) b.x = bc.width + pad;
-        if (b.x > bc.width + pad) b.x = -pad;
-        if (b.y < -pad) b.y = bc.height + pad;
-        if (b.y > bc.height + pad) b.y = -pad;
+    // Click detection
+    document.addEventListener('click', e => {
+      // Don't intercept card clicks
+      if (e.target.closest('.card')) return;
 
-        drawButterfly(b);
+      let hit = false;
+      butterflies.forEach(b => {
+        if (b.state !== 'flying') return;
+        const dx = e.clientX - b.x, dy = e.clientY - b.y;
+        const hitR = b.size * 1.4;
+        if (Math.hypot(dx, dy) < hitR) {
+          // Hit!
+          b.state = 'falling';
+          b.fallVy = 1;
+          b.fallSpin = (Math.random() - 0.5) * 0.25;
+          setScore(score + 1);
+          spawnPopup(b.x - 10, b.y - 20, '+1 🦋', '#16a34a');
+          timerStart = performance.now(); // reset penalty timer on hit
+          hit = true;
+        }
       });
+    });
+
+    function animButterflies(now) {
+      bctx.clearRect(0, 0, bc.width, bc.height);
+      tickPenalty(now);
+
+      butterflies.forEach((b, i) => {
+        if (b.state === 'flying') {
+          b.flapAngle += b.flapSpeed;
+          b.wobble += b.wobbleSpeed;
+          b.bodyAngle += b.turnSpeed + Math.sin(b.wobble) * 0.02;
+          b.vx += Math.cos(b.bodyAngle) * 0.04;
+          b.vy += Math.sin(b.bodyAngle) * 0.04;
+          const spd = Math.hypot(b.vx, b.vy);
+          if (spd > 1.6) { b.vx = b.vx / spd * 1.6; b.vy = b.vy / spd * 1.6; }
+          b.x += b.vx; b.y += b.vy;
+          const pad = b.size * 2;
+          if (b.x < -pad) b.x = bc.width + pad;
+          if (b.x > bc.width + pad) b.x = -pad;
+          if (b.y < -pad) b.y = bc.height + pad;
+          if (b.y > bc.height + pad) b.y = -pad;
+          drawButterfly(b);
+        } else if (b.state === 'falling') {
+          b.fallVy += 0.18;   // gravity
+          b.y += b.fallVy;
+          b.bodyAngle += b.fallSpin;
+          b.alpha = Math.max(0, b.alpha - 0.015);
+          drawButterfly(b);
+          if (b.y > bc.height + 60 || b.alpha <= 0) {
+            // Respawn
+            butterflies[i] = makeButterfly();
+            butterflies[i].y = -30;  // enter from top
+          }
+        }
+      });
+
       requestAnimationFrame(animButterflies);
     }
-    animButterflies();
+    requestAnimationFrame(animButterflies);
 
     // ── Cursor ──
     const cursor = document.getElementById('cursor');
