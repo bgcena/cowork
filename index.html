@@ -129,7 +129,7 @@
       <div class="avatar">👨‍💻</div>
     </div>
 
-    <div class="name">Rajeev Bhat</div>
+    <div class="name">Chinmay Bhat</div>
 
     <div class="role-pill">
       <span><span class="dot"></span> Senior Solution Architect · Akamai</span>
@@ -157,9 +157,135 @@
     </div>
   </div>
 
+  <canvas id="butterfly-canvas" style="position:fixed;inset:0;pointer-events:none;z-index:0;"></canvas>
   <div id="cursor"></div>
 
   <script>
+    // ── Butterfly animation ──
+    const bc = document.getElementById('butterfly-canvas');
+    const bctx = bc.getContext('2d');
+    bc.width = window.innerWidth;
+    bc.height = window.innerHeight;
+    window.addEventListener('resize', () => { bc.width = window.innerWidth; bc.height = window.innerHeight; });
+
+    const WING_COLORS = [
+      ['#f472b6','#fde68a'], ['#818cf8','#bfdbfe'], ['#34d399','#a3e635'],
+      ['#fb923c','#fecaca'], ['#e879f9','#ddd6fe'], ['#22d3ee','#bbf7d0']
+    ];
+
+    function makeButterly() {
+      const cols = WING_COLORS[Math.floor(Math.random() * WING_COLORS.length)];
+      return {
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
+        vx: (Math.random() - 0.5) * 1.2,
+        vy: (Math.random() - 0.5) * 1.2,
+        size: 16 + Math.random() * 18,
+        flapSpeed: 0.08 + Math.random() * 0.07,
+        flapAngle: Math.random() * Math.PI * 2,
+        bodyAngle: Math.random() * Math.PI * 2,
+        turnSpeed: (Math.random() - 0.5) * 0.03,
+        wingColor: cols[0],
+        spotColor: cols[1],
+        wobble: Math.random() * Math.PI * 2,
+        wobbleSpeed: 0.015 + Math.random() * 0.01,
+      };
+    }
+
+    const butterflies = Array.from({ length: 7 }, makeButterly);
+
+    function drawButterfly(b) {
+      bctx.save();
+      bctx.translate(b.x, b.y);
+      bctx.rotate(b.bodyAngle);
+
+      const flap = Math.abs(Math.cos(b.flapAngle)); // 0=closed 1=open
+      const w = b.size * flap;
+
+      // Left wing
+      bctx.save();
+      bctx.scale(-1, 1);
+      drawWing(b, w);
+      bctx.restore();
+
+      // Right wing
+      drawWing(b, w);
+
+      // Body
+      bctx.beginPath();
+      bctx.ellipse(0, 0, 2.5, b.size * 0.45, 0, 0, Math.PI * 2);
+      bctx.fillStyle = '#111';
+      bctx.fill();
+
+      // Antennae
+      bctx.strokeStyle = '#111';
+      bctx.lineWidth = 1;
+      bctx.beginPath();
+      bctx.moveTo(-3, -b.size * 0.4);
+      bctx.quadraticCurveTo(-8, -b.size * 0.7, -6, -b.size * 0.85);
+      bctx.stroke();
+      bctx.beginPath();
+      bctx.moveTo(3, -b.size * 0.4);
+      bctx.quadraticCurveTo(8, -b.size * 0.7, 6, -b.size * 0.85);
+      bctx.stroke();
+
+      bctx.restore();
+    }
+
+    function drawWing(b, w) {
+      const s = b.size;
+      // Upper wing
+      bctx.beginPath();
+      bctx.moveTo(0, -s * 0.1);
+      bctx.bezierCurveTo(w * 0.4, -s * 0.7, w * 1.1, -s * 0.5, w, 0);
+      bctx.bezierCurveTo(w * 0.9, s * 0.15, w * 0.3, s * 0.1, 0, s * 0.1);
+      bctx.fillStyle = b.wingColor + 'cc';
+      bctx.fill();
+      bctx.strokeStyle = '#11111155';
+      bctx.lineWidth = 0.8;
+      bctx.stroke();
+      // Lower wing
+      bctx.beginPath();
+      bctx.moveTo(0, s * 0.1);
+      bctx.bezierCurveTo(w * 0.6, s * 0.2, w * 0.8, s * 0.7, w * 0.3, s * 0.7);
+      bctx.bezierCurveTo(0, s * 0.7, -w * 0.1, s * 0.4, 0, s * 0.1);
+      bctx.fillStyle = b.wingColor + 'aa';
+      bctx.fill();
+      bctx.stroke();
+      // Spot
+      bctx.beginPath();
+      bctx.arc(w * 0.55, -s * 0.15, s * 0.1, 0, Math.PI * 2);
+      bctx.fillStyle = b.spotColor + 'dd';
+      bctx.fill();
+    }
+
+    function animButterflies() {
+      bctx.clearRect(0, 0, bc.width, bc.height);
+      butterflies.forEach(b => {
+        b.flapAngle += b.flapSpeed;
+        b.wobble += b.wobbleSpeed;
+        b.bodyAngle += b.turnSpeed + Math.sin(b.wobble) * 0.02;
+        b.vx += Math.cos(b.bodyAngle) * 0.04;
+        b.vy += Math.sin(b.bodyAngle) * 0.04;
+        // Speed cap
+        const spd = Math.hypot(b.vx, b.vy);
+        if (spd > 1.6) { b.vx = b.vx / spd * 1.6; b.vy = b.vy / spd * 1.6; }
+        b.x += b.vx;
+        b.y += b.vy;
+        // Wrap edges
+        const pad = b.size * 2;
+        if (b.x < -pad) b.x = bc.width + pad;
+        if (b.x > bc.width + pad) b.x = -pad;
+        if (b.y < -pad) b.y = bc.height + pad;
+        if (b.y > bc.height + pad) b.y = -pad;
+
+        drawButterfly(b);
+      });
+      requestAnimationFrame(animButterflies);
+    }
+    animButterflies();
+
+    // ── Cursor ──
     const cursor = document.getElementById('cursor');
     const TRAIL_LEN = 18;
     const trail = [];
