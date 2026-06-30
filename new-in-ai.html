@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>New in AI — Chinmay Bhat</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23111'/%3E%3Ctext x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial Black, sans-serif' font-size='42' font-weight='900' fill='%23fde68a'%3EC%3C/text%3E%3C/svg%3E" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #a7a6a3;
+      min-height: 100vh;
+      padding: 32px 20px 48px;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(circle, #888 1px, transparent 1px);
+      background-size: 28px 28px;
+      opacity: 0.3;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .page { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; }
+
+    /* Header */
+    .site-nav {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 36px;
+    }
+    .back-btn {
+      font-family: Arial Black, sans-serif;
+      font-size: 13px;
+      font-weight: 900;
+      padding: 8px 16px;
+      border-radius: 999px;
+      border: 2.5px solid #111;
+      box-shadow: 3px 3px 0 #111;
+      background: #fff;
+      text-decoration: none;
+      color: #111;
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+    .back-btn:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 #111; }
+
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .header h1 {
+      font-family: Arial Black, sans-serif;
+      font-size: 42px;
+      font-weight: 900;
+      color: #111;
+      letter-spacing: -1px;
+      margin-bottom: 8px;
+    }
+    .header h1 span { color: #818cf8; }
+    .header p { font-size: 15px; color: #444; }
+    .live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #111;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 5px 14px;
+      border-radius: 999px;
+      margin-top: 10px;
+    }
+    .live-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #4ade80;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
+
+    /* Section titles */
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      margin-top: 44px;
+    }
+    .section-title:first-of-type { margin-top: 0; }
+    .section-pill {
+      font-family: Arial Black, sans-serif;
+      font-size: 13px;
+      font-weight: 900;
+      padding: 7px 18px;
+      border-radius: 999px;
+      border: 2.5px solid #111;
+      box-shadow: 3px 3px 0 #111;
+    }
+    .pill-blue  { background: #bfdbfe; }
+    .pill-pink  { background: #fce7f3; }
+    .pill-yellow{ background: #fef08a; }
+
+    .section-line {
+      flex: 1;
+      border-top: 2.5px dashed #999;
+    }
+
+    /* Cards grid */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .card {
+      background: #fff;
+      border: 2.5px solid #111;
+      border-radius: 18px;
+      box-shadow: 5px 5px 0 #111;
+      padding: 22px 22px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: transform 0.12s, box-shadow 0.12s;
+      min-height: 180px;
+    }
+    .card:hover { transform: translate(-2px,-2px); box-shadow: 7px 7px 0 #111; }
+
+    .card-icon { font-size: 26px; line-height: 1; }
+    .card-label {
+      font-family: Arial, sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #888;
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #111;
+      line-height: 1.4;
+      flex: 1;
+    }
+    .card-desc {
+      font-size: 13px;
+      color: #555;
+      line-height: 1.55;
+    }
+    .card-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      color: #6366f1;
+      text-decoration: none;
+      margin-top: 4px;
+    }
+    .card-link:hover { text-decoration: underline; }
+
+    /* Skeleton loader */
+    .skeleton .card-title,
+    .skeleton .card-desc {
+      background: #eee;
+      border-radius: 4px;
+      color: transparent;
+      animation: shimmer 1.2s ease-in-out infinite;
+    }
+    .skeleton .card-title { height: 14px; width: 90%; }
+    .skeleton .card-desc  { height: 12px; width: 100%; margin-top: 4px; }
+    @keyframes shimmer { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    /* Curated cards (static) */
+    .card.curated { background: #fefce8; }
+
+    /* Timestamp */
+    .timestamp {
+      text-align: center;
+      margin-top: 44px;
+      font-family: monospace;
+      font-size: 12px;
+      color: #666;
+    }
+
+    @media(max-width:720px){
+      .cards { grid-template-columns: 1fr; }
+      .header h1 { font-size: 30px; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <nav class="site-nav">
+    <a class="back-btn" href="/">← Home</a>
+  </nav>
+
+  <div class="header">
+    <h1>New in <span>AI</span> 🤖</h1>
+    <p>Curated daily — research, releases &amp; things worth knowing</p>
+    <div class="live-badge"><span class="live-dot"></span> Live — fetched on page load</div>
+  </div>
+
+  <!-- Section 1: Learnings -->
+  <div class="section-title">
+    <div class="section-pill pill-blue">🧠 Interesting Learnings</div>
+    <div class="section-line"></div>
+  </div>
+  <div class="cards" id="learnings-grid">
+    <div class="card skeleton"><div class="card-icon">🧠</div><div class="card-label">Loading…</div><div class="card-title">Fetching latest AI research…</div><div class="card-desc">Please wait</div></div>
+    <div class="card skeleton"><div class="card-icon">🧠</div><div class="card-label">Loading…</div><div class="card-title">Fetching latest AI research…</div><div class="card-desc">Please wait</div></div>
+    <div class="card skeleton"><div class="card-icon">🧠</div><div class="card-label">Loading…</div><div class="card-title">Fetching latest AI research…</div><div class="card-desc">Please wait</div></div>
+  </div>
+
+  <!-- Section 2: Releases -->
+  <div class="section-title">
+    <div class="section-pill pill-pink">🚀 New Releases &amp; Updates</div>
+    <div class="section-line"></div>
+  </div>
+  <div class="cards" id="releases-grid">
+    <div class="card skeleton"><div class="card-icon">🚀</div><div class="card-label">Loading…</div><div class="card-title">Fetching AI releases…</div><div class="card-desc">Please wait</div></div>
+    <div class="card skeleton"><div class="card-icon">🚀</div><div class="card-label">Loading…</div><div class="card-title">Fetching AI releases…</div><div class="card-desc">Please wait</div></div>
+    <div class="card skeleton"><div class="card-icon">🚀</div><div class="card-label">Loading…</div><div class="card-title">Fetching AI releases…</div><div class="card-desc">Please wait</div></div>
+  </div>
+
+  <!-- Section 3: Curated picks -->
+  <div class="section-title">
+    <div class="section-pill pill-yellow">⭐ Chinmay's Picks</div>
+    <div class="section-line"></div>
+  </div>
+  <div class="cards">
+    <div class="card curated">
+      <div class="card-icon">🔐</div>
+      <div class="card-label">Security + AI</div>
+      <div class="card-title">AI is changing the attack surface — and the defence</div>
+      <div class="card-desc">LLM-powered threat detection is outpacing traditional signature-based tools. Worth understanding before your customers ask.</div>
+      <a class="card-link" href="https://www.akamai.com/blog/security" target="_blank">Akamai Security Blog →</a>
+    </div>
+    <div class="card curated">
+      <div class="card-icon">🏗️</div>
+      <div class="card-label">Architecture</div>
+      <div class="card-title">Agentic AI systems need new architecture patterns</div>
+      <div class="card-desc">Multi-agent systems introduce new failure modes — orchestration, memory, and trust boundaries need rethinking from the ground up.</div>
+      <a class="card-link" href="https://www.anthropic.com/research" target="_blank">Anthropic Research →</a>
+    </div>
+    <div class="card curated">
+      <div class="card-icon">⚡</div>
+      <div class="card-label">Edge + AI</div>
+      <div class="card-title">Running inference at the edge is no longer a fantasy</div>
+      <div class="card-desc">Small language models (SLMs) under 7B parameters are now good enough for classification, routing, and summarisation at CDN edge nodes.</div>
+      <a class="card-link" href="https://www.akamai.com/solutions/edge" target="_blank">Edge Computing →</a>
+    </div>
+  </div>
+
+  <div class="timestamp" id="ts">Fetching…</div>
+
+</div>
+
+<script>
+  const ICONS_LEARN   = ['🧠','💡','🔬','📊','🎯','🧪'];
+  const ICONS_RELEASE = ['🚀','⚡','🤖','🔥','✨','🛠️'];
+
+  function cardHTML(icon, label, title, desc, url) {
+    return `
+      <div class="card">
+        <div class="card-icon">${icon}</div>
+        <div class="card-label">${label}</div>
+        <div class="card-title">${title}</div>
+        ${desc ? `<div class="card-desc">${desc}</div>` : ''}
+        ${url  ? `<a class="card-link" href="${url}" target="_blank" rel="noopener">Read more →</a>` : ''}
+      </div>`;
+  }
+
+  function timeAgo(ts) {
+    const s = Math.floor((Date.now()/1000) - ts);
+    if (s < 3600) return Math.floor(s/60) + 'm ago';
+    if (s < 86400) return Math.floor(s/3600) + 'h ago';
+    return Math.floor(s/86400) + 'd ago';
+  }
+
+  async function fetchHN(query, count) {
+    const url = `https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(query)}&tags=story&hitsPerPage=${count * 3}&numericFilters=points>5`;
+    const r = await fetch(url);
+    const d = await r.json();
+    // Filter: must have a title and URL, deduplicate
+    const seen = new Set();
+    return d.hits.filter(h => {
+      if (!h.title || seen.has(h.objectID)) return false;
+      seen.add(h.objectID);
+      return true;
+    }).slice(0, count);
+  }
+
+  async function load() {
+    try {
+      // Fetch learnings and releases in parallel
+      const [learns, releases] = await Promise.all([
+        fetchHN('artificial intelligence research learning', 3),
+        fetchHN('AI model release GPT Claude Gemini LLM', 3),
+      ]);
+
+      document.getElementById('learnings-grid').innerHTML =
+        learns.map((h, i) => cardHTML(
+          ICONS_LEARN[i % ICONS_LEARN.length],
+          `Hacker News · ${timeAgo(h.created_at_i)}`,
+          h.title,
+          h.story_text ? h.story_text.replace(/<[^>]+>/g,'').slice(0,120) + '…' : `${h.points || 0} points · ${h.num_comments || 0} comments`,
+          h.url || `https://news.ycombinator.com/item?id=${h.objectID}`
+        )).join('');
+
+      document.getElementById('releases-grid').innerHTML =
+        releases.map((h, i) => cardHTML(
+          ICONS_RELEASE[i % ICONS_RELEASE.length],
+          `Hacker News · ${timeAgo(h.created_at_i)}`,
+          h.title,
+          `${h.points || 0} points · ${h.num_comments || 0} comments`,
+          h.url || `https://news.ycombinator.com/item?id=${h.objectID}`
+        )).join('');
+
+    } catch(e) {
+      document.getElementById('learnings-grid').innerHTML =
+        '<div class="card"><div class="card-icon">⚠️</div><div class="card-title">Could not load live stories</div><div class="card-desc">Check your connection and refresh.</div></div>';
+      document.getElementById('releases-grid').innerHTML =
+        '<div class="card"><div class="card-icon">⚠️</div><div class="card-title">Could not load live stories</div><div class="card-desc">Check your connection and refresh.</div></div>';
+    }
+
+    document.getElementById('ts').textContent =
+      'Last loaded: ' + new Date().toLocaleString('en-IN', {timeZone:'Asia/Kolkata'}) + ' IST';
+  }
+
+  load();
+</script>
+</body>
+</html>
